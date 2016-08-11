@@ -36,7 +36,12 @@ var RootCmd = &cobra.Command{
 	Short: "InfluxDB metrics dump",
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
+	Run: func(cmd *cobra.Command, args []string) {
+		queryInterval := viper.GetString("interval")
+		queryResolution := viper.GetString("resolution")
+		fmt.Printf("query metrics in %s interval with %s resolution\n",
+			queryInterval, queryResolution)
+	},
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -51,14 +56,11 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports Persistent Flags, which, if defined here,
-	// will be global for your application.
-
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.influx2log.yaml)")
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./config.yaml)")
+	RootCmd.PersistentFlags().StringP("interval", "i", "10m", "metrics interval to query")
+	RootCmd.PersistentFlags().StringP("resolution", "r", "1m", "groupby interval for metrics")
+	viper.BindPFlag("interval", RootCmd.PersistentFlags().Lookup("interval"))
+	viper.BindPFlag("resolution", RootCmd.PersistentFlags().Lookup("resolution"))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -67,9 +69,11 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	}
 
-	viper.SetConfigName(".influx2log") // name of config file (without extension)
-	viper.AddConfigPath("$HOME")       // adding home directory as first search path
-	viper.AutomaticEnv()               // read in environment variables that match
+	viper.SetConfigType("yaml")
+	viper.SetConfigName("config") // name of config file (without extension)
+	viper.AddConfigPath(".")      // adding current directory as first search path
+	viper.SetEnvPrefix("APP")
+	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
